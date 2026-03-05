@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camunda Process History Viewer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+        tr:hover { background-color: #f5f5f5; }
+        .completed { color: green; font-weight: bold; }
+        .active { color: orange; font-weight: bold; }
+        button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; margin: 5px; }
+        button:hover { background-color: #45a049; }
+        .details { background-color: #f9f9f9; padding: 10px; margin: 10px 0; border-left: 4px solid #4CAF50; }
+        .activity { margin: 5px 0; padding: 5px; background: #e8f5e9; }
+    </style>
+</head>
+<body>
+    <h1>📊 Camunda Process History Viewer</h1>
+    
+    <button onclick="loadProcesses()">🔄 Refresh</button>
+    <button onclick="loadRunning()">▶️ Running Only</button>
+    <button onclick="loadCompleted()">✅ Completed Only</button>
+    
+    <div id="stats" style="margin: 20px 0; padding: 10px; background: #e3f2fd; border-radius: 5px;"></div>
+    
+    <table id="processTable">
+        <thead>
+            <tr>
+                <th>Process ID</th>
+                <th>State</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Duration (sec)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="processBody"></tbody>
+    </table>
+    
+    <div id="details"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/engine-rest';
+        
+        async function loadProcesses() {
+            try {
+                const response = await fetch(`${API_BASE}/history/process-instance`);
+                const processes = await response.json();
+                displayProcesses(processes);
+                updateStats(processes);
+            } catch (error) {
+                alert('Error loading processes: ' + error.message);
+            }
+        }
+        
+        async function loadRunning() {
+            try {
+                const response = await fetch(`${API_BASE}/history/process-instance?unfinished=true`);
+                const processes = await response.json();
+                displayProcesses(processes);
+                updateStats(processes);
+            } catch (error) {
+                alert('Error loading running processes: ' + error.message);
+            }
+        }
+        
+        async function loadCompleted() {
+            try {
+                const response = await fetch(`${API_BASE}/history/process-instance?finished=true`);
+                const processes = await response.json();
+                displayProcesses(processes);
+                updateStats(processes);
+            } catch (error) {
+                alert('Error loading completed processes: ' + error.message);
+            }
+        }
+        
+        function updateStats(processes) {
+            const completed = processes.filter(p => p.state === 'COMPLETED').length;
+            const active = processes.filter(p => p.state === 'ACTIVE').length;
+            const total = processes.length;
+            
+            document.getElementById('stats').innerHTML = `
+                <strong>Total:</strong> ${total} | 
+                <strong style="color: green;">Completed:</strong> ${completed} | 
+                <strong style="color: orange;">Active:</strong> ${active}
+            `;
+        }
+        
+        function displayProcesses(processes) {
+            const tbody = document.getElementById('processBody');
+            tbody.innerHTML = '';
+            
+            processes.forEach(process => {
+                const row = tbody.insertRow();
+                const duration = process.durationInMillis ? (process.durationInMillis / 1000).toFixed(2) : 'N/A';
+                const stateClass = process.state === 'COMPLETED' ? 'completed' : 'active';
+                
+                row.innerHTML = `
+                    <td>${process.id}</td>
+                    <td class="${stateClass}">${process.state}</td>
+                    <td>${new Date(process.startTime).toLocaleString()}</td>
+                    <td>${process.endTime ? new Date(process.endTime).toLocaleString() : 'Running...'}</td>
+                    <td>${duration}</td>
+                    <td>
+                        <button onclick="viewDetails('${process.id}')">📋 Details</button>
+                        <button onclick="viewActivities('${process.id}')">🔍 Activities</button>
+                    </td>
+                `;
+            });
+        }
+        
+        async function viewDetails(processId) {
+            try {
+                const [instance, variables] = await Promise.all([
+                    fetch(`${API_BASE}/history/process-instance/${processId}`).then(r => r.json()),
+                    fetch(`${API_BASE}/history/variable-instance?processInstanceId=${processId}`).then(r => r.json())
+                ]);
+                
+                let html = `<div class="details">
+                    <h3>Process Instance: ${processId}</h3>
+                    <p><strong>Definition:</strong> ${instance.processDefinitionKey}</p>
+                    <p><strong>State:</strong> ${instance.state}</p>
+                    <p><strong>Duration:</strong> ${(instance.durationInMillis / 1000).toFixed(2)} seconds</p>
+                    <h4>Variables:</h4>
+                    <ul>`;
+                
+                variables.forEach(v => {
+                    html += `<li><strong>${v.name}:</strong> ${v.value}</li>`;
+                });
+                
+                html += `</ul></div>`;
+                document.getElementById('details').innerHTML = html;
+            } catch (error) {
+                alert('Error loading details: ' + error.message);
+            }
+        }
+        
+        async function viewActivities(processId) {
+            try {
+                const activities = await fetch(`${API_BASE}/history/activity-instance?processInstanceId=${processId}`)
+                    .then(r => r.json());
+                
+                let html = `<div class="details">
+                    <h3>Activities for Process: ${processId}</h3>`;
+                
+                activities.forEach(activity => {
+                    const duration = activity.durationInMillis ? (activity.durationInMillis / 1000).toFixed(2) : 'N/A';
+                    html += `<div class="activity">
+                        <strong>${activity.activityName || activity.activityId}</strong> 
+                        (${activity.activityType}) - 
+                        Duration: ${duration}s
+                    </div>`;
+                });
+                
+                html += `</div>`;
+                document.getElementById('details').innerHTML = html;
+            } catch (error) {
+                alert('Error loading activities: ' + error.message);
+            }
+        }
+        
+        // Load on page load
+        loadProcesses();
+    </script>
+</body>
+</html>
