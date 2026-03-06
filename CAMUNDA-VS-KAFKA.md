@@ -465,3 +465,27 @@ Application → Credit Check → Income Verification → Manager Approval → Di
 - **Camunda** = Traffic controller with rules, signals, and monitoring
 
 You can build a traffic system with just highways, but adding a controller makes it much more manageable! 🚦
+
+
+## Key Takeaways:
+
+You're right - for simple linear workflows, Camunda External Tasks ≈ Kafka topics.
+
+**Camunda adds value when you need:**
+
+✅ Human tasks (approvals, manual reviews)
+✅ Complex routing (if/else, parallel execution)
+✅ Long-running processes (days/weeks with timers)
+✅ Process visibility (dashboards, monitoring)
+✅ Compensation (automatic rollback/saga)
+✅ Audit trail (compliance requirements)
+✅ Business rule changes (modify process without code)
+
+**Use Kafka alone when:**
+
+Simple event streaming
+High throughput (>10K msg/s)
+No human intervention
+Linear workflows
+
+**Best approach:** Camunda for orchestration + Kafka for event streaming = Hybrid architecture! 🚀
