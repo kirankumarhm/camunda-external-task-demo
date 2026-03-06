@@ -473,13 +473,13 @@ You're right - for simple linear workflows, Camunda External Tasks ≈ Kafka top
 
 **Camunda adds value when you need:**
 
-✅ Human tasks (approvals, manual reviews)
-✅ Complex routing (if/else, parallel execution)
-✅ Long-running processes (days/weeks with timers)
-✅ Process visibility (dashboards, monitoring)
-✅ Compensation (automatic rollback/saga)
-✅ Audit trail (compliance requirements)
-✅ Business rule changes (modify process without code)
+- ✅ Human tasks (approvals, manual reviews)  
+- ✅ Complex routing (if/else, parallel execution)  
+- ✅ Long-running processes (days/weeks with timers)  
+- ✅ Process visibility (dashboards, monitoring)  
+- ✅ Compensation (automatic rollback/saga)  
+- ✅ Audit trail (compliance requirements)  
+- ✅ Business rule changes (modify process without code)  
 
 **Use Kafka alone when:**
 
